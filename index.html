@@ -183,6 +183,16 @@
       letter-spacing: 0.06em;
     }
 
+    .time-tag {
+      display: inline-block;
+      margin-bottom: 12px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: #fff3cf;
+      border: 2px solid #ffd27b;
+      font-weight: 700;
+    }
+
     .hand-pick {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -312,10 +322,11 @@
         <div class="answer-card">
           <div id="readTask">
             <p class="prompt">Mit mutat az óra?</p>
+            <div class="time-tag" id="periodTag"></div>
             <div class="inputs">
               <label>
                 Óra
-                <input id="hourInput" type="number" inputmode="numeric" min="1" max="12">
+                <input id="hourInput" type="number" inputmode="numeric" min="0" max="23">
               </label>
               <label>
                 Perc
@@ -341,12 +352,12 @@
 
       <div class="result-card">
         <button class="secondary-btn" id="nextBtn" hidden>Következő feladat</button>
-        <button class="secondary-btn" id="restartBtn" hidden>Új kör</button>
       </div>
 
       <div class="reward" id="rewardBox">
         <h3 id="rewardTitle"></h3>
         <img id="rewardImage" alt="Jutalomkép">
+        <button class="secondary-btn" id="restartBtn" hidden>Új kör</button>
       </div>
     </section>
   </main>
@@ -383,6 +394,7 @@
       setTask: document.getElementById("setTask"),
       hourInput: document.getElementById("hourInput"),
       minuteInput: document.getElementById("minuteInput"),
+      periodTag: document.getElementById("periodTag"),
       targetTime: document.getElementById("targetTime"),
       checkBtn: document.getElementById("checkBtn"),
       nextBtn: document.getElementById("nextBtn"),
@@ -408,7 +420,8 @@
       return Array.from({ length: SETTINGS.taskCount }, () => ({
         type: Math.random() < 0.5 ? "read" : "set",
         hour: Math.floor(Math.random() * 12) + 1,
-        minute: Math.floor(Math.random() * (60 / SETTINGS.minuteStep)) * SETTINGS.minuteStep
+        minute: Math.floor(Math.random() * (60 / SETTINGS.minuteStep)) * SETTINGS.minuteStep,
+        period: Math.random() < 0.5 ? "am" : "pm"
       }));
     }
 
@@ -423,6 +436,21 @@
 
     function timeText({ hour, minute }) {
       return `${normalizeHour(hour)}:${pad(minute)}`;
+    }
+
+    function timeText24(task) {
+      return `${task.readHour}:${pad(task.minute)}`;
+    }
+
+    function periodLabel(period) {
+      return period === "am" ? "Délelőtt" : "Délután";
+    }
+
+    function getReadHour(task) {
+      if (task.period === "am") {
+        return task.hour === 12 ? 0 : task.hour;
+      }
+      return task.hour === 12 ? 12 : task.hour + 12;
     }
 
     function setFeedback(message, type = "") {
@@ -529,6 +557,7 @@
         els.setTask.hidden = true;
         els.hourInput.value = "";
         els.minuteInput.value = "";
+        els.periodTag.textContent = periodLabel(task.period);
         drawClock(task, false);
         setFeedback("Írd be az órát és a percet, aztán nyomd meg az Ellenőrzés gombot.");
         els.hourInput.focus();
@@ -544,7 +573,10 @@
     }
 
     function startGame() {
-      appState.tasks = generateTimes();
+      appState.tasks = generateTimes().map((task) => ({
+        ...task,
+        readHour: getReadHour(task)
+      }));
       appState.currentIndex = 0;
       appState.score = 0;
       els.setupPanel.style.display = "none";
@@ -592,11 +624,11 @@
     function getReadAnswer() {
       const hour = Number(els.hourInput.value);
       const minute = Number(els.minuteInput.value);
-      return { hour: normalizeHour(hour), minute };
+      return { hour, minute };
     }
 
     function isCorrectRead(task, answer) {
-      return normalizeHour(task.hour) === normalizeHour(answer.hour) && task.minute === answer.minute;
+      return task.readHour === answer.hour && task.minute === answer.minute;
     }
 
     function isCorrectSet(task) {
@@ -612,9 +644,9 @@
 
       if (task.type === "read") {
         const answer = getReadAnswer();
-        const valid = answer.hour >= 1 && answer.hour <= 12 && answer.minute >= 0 && answer.minute < 60 && answer.minute % SETTINGS.minuteStep === 0;
+        const valid = answer.hour >= 0 && answer.hour <= 23 && answer.minute >= 0 && answer.minute < 60 && answer.minute % SETTINGS.minuteStep === 0;
         if (!valid) {
-          setFeedback("Kérlek 1-12 közötti órát és 5 perces percet írj be.", "bad");
+          setFeedback("Kérlek 0-23 közötti órát és 5 perces percet írj be.", "bad");
           return;
         }
         correct = isCorrectRead(task, answer);
@@ -627,7 +659,8 @@
         appState.score += 1;
         setFeedback("Helyes válasz!", "ok");
       } else {
-        setFeedback(`Most nem ez volt a jó megoldás. A helyes idő: ${timeText(task)}.`, "bad");
+        const solution = task.type === "read" ? `${periodLabel(task.period)}: ${timeText24(task)}` : timeText(task);
+        setFeedback(`Most nem ez volt a jó megoldás. A helyes idő: ${solution}.`, "bad");
       }
 
       updateStatus();
