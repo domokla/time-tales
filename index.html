@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Órás mini játék</title>
+  <style>
+    :root {
+      --bg-1: #fdf6e9;
+      --bg-2: #dff4ff;
+      --card: rgba(255, 255, 255, 0.88);
+      --text: #16324f;
+      --accent: #ff8a5b;
+      --accent-2: #53b26b;
+      --bad: #d94a4a;
+      --line: #c9dceb;
+      --shadow: 0 18px 40px rgba(22, 50, 79, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Trebuchet MS", "Comic Sans MS", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, #fff7c8 0, transparent 28%),
+        radial-gradient(circle at bottom right, #cceefe 0, transparent 25%),
+        linear-gradient(160deg, var(--bg-1), var(--bg-2));
+      min-height: 100vh;
+    }
+
+    .app {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 20px 16px 48px;
+    }
+
+    .hero {
+      text-align: center;
+      padding: 12px 0 20px;
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(2rem, 5vw, 3.3rem);
+    }
+
+    .hero p {
+      margin: 10px auto 0;
+      max-width: 680px;
+      font-size: 1.05rem;
+    }
+
+    .panel {
+      background: var(--card);
+      border: 3px solid rgba(255, 255, 255, 0.7);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+
+    .setup {
+      padding: 20px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .mode-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 18px;
+      font: inherit;
+      font-weight: 700;
+      color: white;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+
+    button:hover { transform: translateY(-2px); }
+    button:active { transform: translateY(0); }
+
+    .mode-btn, .primary-btn, .secondary-btn, .hand-btn {
+      padding: 14px 18px;
+    }
+
+    .mode-btn {
+      background: linear-gradient(135deg, #2d87c8, #52c6d8);
+      text-align: left;
+    }
+
+    .mode-btn.active {
+      outline: 4px solid rgba(255, 138, 91, 0.35);
+      background: linear-gradient(135deg, #ff8a5b, #ffb067);
+    }
+
+    .mode-title {
+      display: block;
+      font-size: 1.15rem;
+      margin-bottom: 4px;
+    }
+
+    .hint {
+      font-size: 0.95rem;
+      opacity: 0.92;
+    }
+
+    .primary-btn {
+      background: linear-gradient(135deg, #53b26b, #78cc74);
+      justify-self: center;
+      min-width: 210px;
+    }
+
+    .game {
+      display: none;
+      margin-top: 18px;
+      padding: 20px;
+      gap: 18px;
+    }
+
+    .game.active {
+      display: grid;
+    }
+
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .pill {
+      background: white;
+      border: 2px solid var(--line);
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-weight: 700;
+    }
+
+    .task-layout {
+      display: grid;
+      grid-template-columns: minmax(280px, 420px) minmax(260px, 1fr);
+      gap: 22px;
+      align-items: start;
+    }
+
+    .clock-card, .answer-card, .result-card {
+      background: rgba(255, 255, 255, 0.82);
+      border: 2px solid var(--line);
+      border-radius: 24px;
+      padding: 18px;
+    }
+
+    .clock-wrap {
+      aspect-ratio: 1;
+      width: min(100%, 360px);
+      margin: 0 auto;
+    }
+
+    .clock-svg {
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .prompt {
+      margin: 0 0 14px;
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .inputs {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(120px, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-weight: 700;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 2px solid var(--line);
+      font: inherit;
+      font-size: 1.1rem;
+      color: var(--text);
+    }
+
+    .time-readout {
+      font-size: clamp(2rem, 8vw, 3.6rem);
+      text-align: center;
+      background: white;
+      border: 3px dashed #ffd27b;
+      border-radius: 22px;
+      padding: 18px;
+      margin-bottom: 16px;
+      letter-spacing: 0.06em;
+    }
+
+    .hand-pick {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .hand-btn {
+      background: linear-gradient(135deg, #8cb4ff, #5a8cf2);
+    }
+
+    .hand-btn.active {
+      background: linear-gradient(135deg, #ff8a5b, #ffb067);
+    }
+
+    .secondary-btn {
+      background: linear-gradient(135deg, #2d87c8, #52c6d8);
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    .feedback {
+      min-height: 54px;
+      border-radius: 18px;
+      padding: 14px 16px;
+      font-weight: 700;
+      background: #f6fbff;
+      border: 2px solid var(--line);
+    }
+
+    .feedback.ok {
+      color: #166534;
+      background: #e8faea;
+      border-color: #9ad7a4;
+    }
+
+    .feedback.bad {
+      color: #8a1f1f;
+      background: #ffe8e8;
+      border-color: #efaaaa;
+    }
+
+    .reward {
+      display: none;
+      margin-top: 18px;
+      padding: 18px;
+      text-align: center;
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,246,213,0.96));
+      border: 3px solid #ffd27b;
+    }
+
+    .reward.show { display: block; }
+
+    .reward img {
+      width: min(100%, 320px);
+      max-height: 300px;
+      object-fit: cover;
+      border-radius: 20px;
+      border: 4px solid white;
+      box-shadow: var(--shadow);
+    }
+
+    .small {
+      font-size: 0.95rem;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 840px) {
+      .task-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="hero">
+      <h1>Óra Játék</h1>
+      <p>Gyakorold az idő leolvasását és az óra beállítását 5 perces időpontokkal.</p>
+    </section>
+
+    <section class="panel setup" id="setupPanel">
+      <div>
+        <h2>Válassz játékot</h2>
+        <p class="small">Egy körben 5 feladat lesz. Ha legalább 4 jó, kapsz egy jutalomképet.</p>
+      </div>
+
+      <div class="mode-grid" id="modeButtons">
+        <button class="mode-btn active" data-mode="read">
+          <span class="mode-title">Olvasd le az órát</span>
+          <span class="hint">Analóg órát látsz, te írod be az órát és a percet.</span>
+        </button>
+
+        <button class="mode-btn" data-mode="set">
+          <span class="mode-title">Állítsd be az órát</span>
+          <span class="hint">Egy időt látsz, te állítod a mutatókat az órán.</span>
+        </button>
+      </div>
+
+      <button class="primary-btn" id="startBtn">Játék indítása</button>
+    </section>
+
+    <section class="panel game" id="gamePanel">
+      <div class="topbar">
+        <div class="pill" id="modeLabel"></div>
+        <div class="pill" id="progressLabel"></div>
+        <div class="pill" id="scoreLabel"></div>
+      </div>
+
+      <div class="task-layout">
+        <div class="clock-card">
+          <div class="clock-wrap">
+            <svg class="clock-svg" id="clockSvg" viewBox="0 0 300 300" aria-labelledby="clockTitle">
+              <title id="clockTitle">Analóg óra</title>
+            </svg>
+          </div>
+        </div>
+
+        <div class="answer-card">
+          <div id="readTask">
+            <p class="prompt">Mit mutat az óra?</p>
+            <div class="inputs">
+              <label>
+                Óra
+                <input id="hourInput" type="number" inputmode="numeric" min="1" max="12" placeholder="pl. 3">
+              </label>
+              <label>
+                Perc
+                <input id="minuteInput" type="number" inputmode="numeric" min="0" max="55" step="5" placeholder="pl. 25">
+              </label>
+            </div>
+          </div>
+
+          <div id="setTask" hidden>
+            <p class="prompt">Állítsd be ezt az időt:</p>
+            <div class="time-readout" id="targetTime"></div>
+            <div class="hand-pick">
+              <button class="hand-btn active" id="hourHandBtn">Óramutató</button>
+              <button class="hand-btn" id="minuteHandBtn">Percmutató</button>
+            </div>
+            <p class="small">Koppints vagy húzz az órán. Először válaszd ki, melyik mutatót állítod.</p>
+          </div>
+
+          <button class="secondary-btn" id="checkBtn">Ellenőrzés</button>
+          <div class="feedback" id="feedback">Készen állsz az első feladatra?</div>
+        </div>
+      </div>
+
+      <div class="result-card">
+        <p class="prompt">Kör vége után</p>
+        <p class="small">Az utolsó feladat után itt látod az eredményt és a jutalomképet.</p>
+        <button class="secondary-btn" id="nextBtn" hidden>Következő feladat</button>
+        <button class="secondary-btn" id="restartBtn" hidden>Új kör</button>
+      </div>
+
+      <div class="reward" id="rewardBox">
+        <h3 id="rewardTitle"></h3>
+        <img id="rewardImage" alt="Jutalomkép">
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const IMAGE_MANIFEST = [
+      "images/pic-1.jpg",
+      "images/pic-2.jpg"
+    ];
+
+    const SETTINGS = {
+      taskCount: 5,
+      passingScore: 4,
+      minuteStep: 5
+    };
+
+    const appState = {
+      mode: "read",
+      tasks: [],
+      currentIndex: 0,
+      score: 0,
+      selectedHand: "hour",
+      interactiveTime: { hour: 12, minute: 0 },
+      locked: false
+    };
+
+    const els = {
+      setupPanel: document.getElementById("setupPanel"),
+      gamePanel: document.getElementById("gamePanel"),
+      modeButtons: [...document.querySelectorAll(".mode-btn")],
+      startBtn: document.getElementById("startBtn"),
+      modeLabel: document.getElementById("modeLabel"),
+      progressLabel: document.getElementById("progressLabel"),
+      scoreLabel: document.getElementById("scoreLabel"),
+      readTask: document.getElementById("readTask"),
+      setTask: document.getElementById("setTask"),
+      hourInput: document.getElementById("hourInput"),
+      minuteInput: document.getElementById("minuteInput"),
+      targetTime: document.getElementById("targetTime"),
+      checkBtn: document.getElementById("checkBtn"),
+      nextBtn: document.getElementById("nextBtn"),
+      restartBtn: document.getElementById("restartBtn"),
+      feedback: document.getElementById("feedback"),
+      rewardBox: document.getElementById("rewardBox"),
+      rewardTitle: document.getElementById("rewardTitle"),
+      rewardImage: document.getElementById("rewardImage"),
+      hourHandBtn: document.getElementById("hourHandBtn"),
+      minuteHandBtn: document.getElementById("minuteHandBtn"),
+      clockSvg: document.getElementById("clockSvg")
+    };
+
+    function randItem(list) {
+      return list[Math.floor(Math.random() * list.length)];
+    }
+
+    function generateTimes() {
+      return Array.from({ length: SETTINGS.taskCount }, () => ({
+        hour: Math.floor(Math.random() * 12) + 1,
+        minute: Math.floor(Math.random() * (60 / SETTINGS.minuteStep)) * SETTINGS.minuteStep
+      }));
+    }
+
+    function pad(num) {
+      return String(num).padStart(2, "0");
+    }
+
+    function normalizeHour(hour) {
+      const value = hour % 12;
+      return value === 0 ? 12 : value;
+    }
+
+    function timeText({ hour, minute }) {
+      return `${normalizeHour(hour)}:${pad(minute)}`;
+    }
+
+    function updateModeButtons() {
+      els.modeButtons.forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.mode === appState.mode);
+      });
+    }
+
+    function setFeedback(message, type = "") {
+      els.feedback.textContent = message;
+      els.feedback.className = `feedback ${type}`.trim();
+    }
+
+    function updateStatus() {
+      els.modeLabel.textContent = appState.mode === "read" ? "Olvasd le az órát" : "Állítsd be az órát";
+      els.progressLabel.textContent = `Feladat: ${appState.currentIndex + 1}/${appState.tasks.length}`;
+      els.scoreLabel.textContent = `Pont: ${appState.score}`;
+    }
+
+    function setSelectedHand(hand) {
+      appState.selectedHand = hand;
+      els.hourHandBtn.classList.toggle("active", hand === "hour");
+      els.minuteHandBtn.classList.toggle("active", hand === "minute");
+    }
+
+    function handLine(angleDeg, length, back, color, width) {
+      const center = 150;
+      const angle = (angleDeg - 90) * Math.PI / 180;
+      return {
+        x1: center - Math.cos(angle) * back,
+        y1: center - Math.sin(angle) * back,
+        x2: center + Math.cos(angle) * length,
+        y2: center + Math.sin(angle) * length,
+        stroke: color,
+        "stroke-width": width,
+        "stroke-linecap": "round"
+      };
+    }
+
+    function drawClock(time, interactive = false) {
+      const svg = els.clockSvg;
+      svg.innerHTML = "";
+
+      const ns = "http://www.w3.org/2000/svg";
+      const center = 150;
+      const radius = 126;
+
+      const make = (tag, attrs = {}) => {
+        const node = document.createElementNS(ns, tag);
+        Object.entries(attrs).forEach(([key, value]) => node.setAttribute(key, value));
+        return node;
+      };
+
+      svg.appendChild(make("circle", {
+        cx: center, cy: center, r: radius,
+        fill: "#fffef8", stroke: "#9fc0d9", "stroke-width": 8
+      }));
+
+      for (let i = 0; i < 60; i += 1) {
+        const angle = (i * 6 - 90) * Math.PI / 180;
+        const inner = i % 5 === 0 ? radius - 22 : radius - 12;
+        const outer = radius - 4;
+        svg.appendChild(make("line", {
+          x1: center + Math.cos(angle) * inner,
+          y1: center + Math.sin(angle) * inner,
+          x2: center + Math.cos(angle) * outer,
+          y2: center + Math.sin(angle) * outer,
+          stroke: i % 5 === 0 ? "#2b5a78" : "#9fc0d9",
+          "stroke-width": i % 5 === 0 ? 4 : 2,
+          "stroke-linecap": "round"
+        }));
+      }
+
+      for (let n = 1; n <= 12; n += 1) {
+        const angle = (n * 30 - 90) * Math.PI / 180;
+        const label = make("text", {
+          x: center + Math.cos(angle) * (radius - 42),
+          y: center + Math.sin(angle) * (radius - 42) + 7,
+          "text-anchor": "middle",
+          "font-size": "24",
+          "font-weight": "700",
+          fill: "#16324f"
+        });
+        label.textContent = String(n);
+        svg.appendChild(label);
+      }
+
+      const minuteAngle = time.minute * 6;
+      const hourAngle = normalizeHour(time.hour) * 30 + time.minute * 0.5;
+
+      svg.appendChild(make("line", handLine(hourAngle, 58, 10, interactive && appState.selectedHand === "hour" ? "#ff8a5b" : "#16324f", 8)));
+      svg.appendChild(make("line", handLine(minuteAngle, 90, 16, interactive && appState.selectedHand === "minute" ? "#ff8a5b" : "#2d87c8", 6)));
+      svg.appendChild(make("circle", { cx: center, cy: center, r: 9, fill: "#ffb067", stroke: "#16324f", "stroke-width": 3 }));
+    }
+
+    function showTask() {
+      const task = appState.tasks[appState.currentIndex];
+      appState.locked = false;
+      els.checkBtn.hidden = false;
+      els.nextBtn.hidden = true;
+      els.restartBtn.hidden = true;
+      els.rewardBox.classList.remove("show");
+      updateStatus();
+
+      if (appState.mode === "read") {
+        els.readTask.hidden = false;
+        els.setTask.hidden = true;
+        els.hourInput.value = "";
+        els.minuteInput.value = "";
+        drawClock(task, false);
+        setFeedback("Írd be az órát és a percet, aztán nyomd meg az Ellenőrzés gombot.");
+        els.hourInput.focus();
+      } else {
+        els.readTask.hidden = true;
+        els.setTask.hidden = false;
+        appState.interactiveTime = { hour: 12, minute: 0 };
+        setSelectedHand("hour");
+        els.targetTime.textContent = timeText(task);
+        drawClock(appState.interactiveTime, true);
+        setFeedback("Állítsd be a mutatókat az órán.");
+      }
+    }
+
+    function startGame() {
+      appState.tasks = generateTimes();
+      appState.currentIndex = 0;
+      appState.score = 0;
+      els.setupPanel.style.display = "none";
+      els.gamePanel.classList.add("active");
+      showTask();
+    }
+
+    function pickReward() {
+      const list = IMAGE_MANIFEST.filter((file) => !file.startsWith("images/."));
+      if (!list.length) {
+        els.rewardTitle.textContent = "Szuper voltál! Most nincs betöltött jutalomkép.";
+        els.rewardImage.removeAttribute("src");
+        els.rewardImage.alt = "Nincs jutalomkép";
+        els.rewardImage.style.display = "none";
+        return;
+      }
+
+      const image = randItem(list);
+      els.rewardTitle.textContent = "Ügyes vagy! Itt a jutalomképed:";
+      els.rewardImage.src = image;
+      els.rewardImage.alt = "Jutalomkép";
+      els.rewardImage.style.display = "inline-block";
+    }
+
+    function finishRound() {
+      const passed = appState.score >= SETTINGS.passingScore;
+      els.checkBtn.hidden = true;
+      els.nextBtn.hidden = true;
+      els.restartBtn.hidden = false;
+      els.rewardBox.classList.add("show");
+
+      if (passed) {
+        setFeedback(`Szép munka! ${appState.score}/${SETTINGS.taskCount} jó válaszod lett.`, "ok");
+        pickReward();
+      } else {
+        setFeedback(`Most ${appState.score}/${SETTINGS.taskCount} pontod lett. Próbáld meg újra!`, "bad");
+        els.rewardTitle.textContent = "Még egy kör, és jöhet a jutalomkép!";
+        els.rewardImage.removeAttribute("src");
+        els.rewardImage.style.display = "none";
+      }
+    }
+
+    function getReadAnswer() {
+      const hour = Number(els.hourInput.value);
+      const minute = Number(els.minuteInput.value);
+      return { hour: normalizeHour(hour), minute };
+    }
+
+    function isCorrectRead(task, answer) {
+      return normalizeHour(task.hour) === normalizeHour(answer.hour) && task.minute === answer.minute;
+    }
+
+    function isCorrectSet(task) {
+      return normalizeHour(task.hour) === normalizeHour(appState.interactiveTime.hour) &&
+        task.minute === appState.interactiveTime.minute;
+    }
+
+    function checkTask() {
+      if (appState.locked) return;
+
+      const task = appState.tasks[appState.currentIndex];
+      let correct = false;
+
+      if (appState.mode === "read") {
+        const answer = getReadAnswer();
+        const valid = answer.hour >= 1 && answer.hour <= 12 && answer.minute >= 0 && answer.minute < 60 && answer.minute % SETTINGS.minuteStep === 0;
+        if (!valid) {
+          setFeedback("Kérlek 1-12 közötti órát és 5 perces percet írj be.", "bad");
+          return;
+        }
+        correct = isCorrectRead(task, answer);
+      } else {
+        correct = isCorrectSet(task);
+      }
+
+      appState.locked = true;
+      if (correct) {
+        appState.score += 1;
+        setFeedback("Helyes válasz!", "ok");
+      } else {
+        setFeedback(`Most nem ez volt a jó megoldás. A helyes idő: ${timeText(task)}.`, "bad");
+      }
+
+      updateStatus();
+      els.checkBtn.hidden = true;
+
+      if (appState.currentIndex === appState.tasks.length - 1) {
+        finishRound();
+      } else {
+        els.nextBtn.hidden = false;
+      }
+    }
+
+    function nextTask() {
+      appState.currentIndex += 1;
+      showTask();
+    }
+
+    function angleFromPointer(clientX, clientY) {
+      const rect = els.clockSvg.getBoundingClientRect();
+      const x = ((clientX - rect.left) / rect.width) * 300;
+      const y = ((clientY - rect.top) / rect.height) * 300;
+      const dx = x - 150;
+      const dy = y - 150;
+      let deg = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+      if (deg < 0) deg += 360;
+      return deg;
+    }
+
+    function snapMinute(angle) {
+      return Math.round(angle / (SETTINGS.minuteStep * 6)) * SETTINGS.minuteStep % 60;
+    }
+
+    function updateInteractiveTime(angle) {
+      if (appState.selectedHand === "minute") {
+        appState.interactiveTime.minute = snapMinute(angle);
+      } else {
+        const rawHour = Math.round(angle / 30) || 12;
+        appState.interactiveTime.hour = normalizeHour(rawHour);
+      }
+      drawClock(appState.interactiveTime, true);
+    }
+
+    let dragging = false;
+
+    function handlePointer(event) {
+      if (appState.mode !== "set" || appState.locked) return;
+      updateInteractiveTime(angleFromPointer(event.clientX, event.clientY));
+    }
+
+    els.modeButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        appState.mode = btn.dataset.mode;
+        updateModeButtons();
+      });
+    });
+
+    els.startBtn.addEventListener("click", startGame);
+    els.checkBtn.addEventListener("click", checkTask);
+    els.nextBtn.addEventListener("click", nextTask);
+    els.restartBtn.addEventListener("click", () => {
+      els.setupPanel.style.display = "grid";
+      els.gamePanel.classList.remove("active");
+      els.rewardBox.classList.remove("show");
+      updateModeButtons();
+    });
+    els.hourHandBtn.addEventListener("click", () => setSelectedHand("hour"));
+    els.minuteHandBtn.addEventListener("click", () => setSelectedHand("minute"));
+
+    els.clockSvg.addEventListener("pointerdown", (event) => {
+      dragging = true;
+      els.clockSvg.setPointerCapture(event.pointerId);
+      handlePointer(event);
+    });
+
+    els.clockSvg.addEventListener("pointermove", (event) => {
+      if (dragging) handlePointer(event);
+    });
+
+    els.clockSvg.addEventListener("pointerup", () => {
+      dragging = false;
+    });
+
+    els.clockSvg.addEventListener("pointerleave", () => {
+      dragging = false;
+    });
+
+    updateModeButtons();
+    drawClock({ hour: 10, minute: 10 }, false);
+  </script>
+</body>
+</html>
