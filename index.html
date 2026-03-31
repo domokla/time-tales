@@ -237,6 +237,14 @@
 
     .reward.show { display: block; }
 
+    .result-card {
+      display: none;
+    }
+
+    .result-card.show {
+      display: block;
+    }
+
     .reward img {
       width: min(100%, 320px);
       max-height: 300px;
@@ -307,11 +315,11 @@
             <div class="inputs">
               <label>
                 Óra
-                <input id="hourInput" type="number" inputmode="numeric" min="1" max="12" placeholder="pl. 3">
+                <input id="hourInput" type="number" inputmode="numeric" min="1" max="12">
               </label>
               <label>
                 Perc
-                <input id="minuteInput" type="number" inputmode="numeric" min="0" max="55" step="5" placeholder="pl. 25">
+                <input id="minuteInput" type="number" inputmode="numeric" min="0" max="55" step="5">
               </label>
             </div>
           </div>
@@ -332,8 +340,6 @@
       </div>
 
       <div class="result-card">
-        <p class="prompt">Kör vége után</p>
-        <p class="small">Az utolsó feladat után itt látod az eredményt és a jutalomképet.</p>
         <button class="secondary-btn" id="nextBtn" hidden>Következő feladat</button>
         <button class="secondary-btn" id="restartBtn" hidden>Új kör</button>
       </div>
@@ -385,10 +391,14 @@
       rewardBox: document.getElementById("rewardBox"),
       rewardTitle: document.getElementById("rewardTitle"),
       rewardImage: document.getElementById("rewardImage"),
+      resultCard: document.querySelector(".result-card"),
       hourHandBtn: document.getElementById("hourHandBtn"),
       minuteHandBtn: document.getElementById("minuteHandBtn"),
       clockSvg: document.getElementById("clockSvg")
     };
+
+    const AUTO_NEXT_DELAY = 1800;
+    let autoNextTimer = null;
 
     function randItem(list) {
       return list[Math.floor(Math.random() * list.length)];
@@ -505,11 +515,13 @@
 
     function showTask() {
       const task = appState.tasks[appState.currentIndex];
+      clearTimeout(autoNextTimer);
       appState.locked = false;
       els.checkBtn.hidden = false;
       els.nextBtn.hidden = true;
       els.restartBtn.hidden = true;
       els.rewardBox.classList.remove("show");
+      els.resultCard.classList.remove("show");
       updateStatus();
 
       if (task.type === "read") {
@@ -558,11 +570,13 @@
     }
 
     function finishRound() {
+      clearTimeout(autoNextTimer);
       const passed = appState.score >= SETTINGS.passingScore;
       els.checkBtn.hidden = true;
       els.nextBtn.hidden = true;
       els.restartBtn.hidden = false;
       els.rewardBox.classList.add("show");
+      els.resultCard.classList.add("show");
 
       if (passed) {
         setFeedback(`Szép munka! ${appState.score}/${SETTINGS.taskCount} jó válaszod lett.`, "ok");
@@ -622,7 +636,9 @@
       if (appState.currentIndex === appState.tasks.length - 1) {
         finishRound();
       } else {
-        els.nextBtn.hidden = false;
+        autoNextTimer = setTimeout(() => {
+          nextTask();
+        }, AUTO_NEXT_DELAY);
       }
     }
 
@@ -668,9 +684,11 @@
     els.checkBtn.addEventListener("click", checkTask);
     els.nextBtn.addEventListener("click", nextTask);
     els.restartBtn.addEventListener("click", () => {
+      clearTimeout(autoNextTimer);
       els.setupPanel.style.display = "grid";
       els.gamePanel.classList.remove("active");
       els.rewardBox.classList.remove("show");
+      els.resultCard.classList.remove("show");
     });
     els.hourHandBtn.addEventListener("click", () => setSelectedHand("hour"));
     els.minuteHandBtn.addEventListener("click", () => setSelectedHand("minute"));
