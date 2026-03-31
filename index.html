@@ -337,6 +337,7 @@
 
           <div id="setTask" hidden>
             <p class="prompt">Állítsd be ezt az időt:</p>
+            <div class="time-tag" id="setPeriodTag"></div>
             <div class="time-readout" id="targetTime"></div>
             <div class="hand-pick">
               <button class="hand-btn active" id="hourHandBtn">Óramutató</button>
@@ -363,11 +364,6 @@
   </main>
 
   <script>
-    const IMAGE_MANIFEST = [
-      "images/pic-1.jpg",
-      "images/pic-2.jpg"
-    ];
-
     const SETTINGS = {
       taskCount: 5,
       passingScore: 4,
@@ -395,6 +391,7 @@
       hourInput: document.getElementById("hourInput"),
       minuteInput: document.getElementById("minuteInput"),
       periodTag: document.getElementById("periodTag"),
+      setPeriodTag: document.getElementById("setPeriodTag"),
       targetTime: document.getElementById("targetTime"),
       checkBtn: document.getElementById("checkBtn"),
       nextBtn: document.getElementById("nextBtn"),
@@ -411,9 +408,65 @@
 
     const AUTO_NEXT_DELAY = 1800;
     let autoNextTimer = null;
+    const rewardPool = {
+      urls: [],
+      scanned: false,
+      scanning: false
+    };
 
     function randItem(list) {
       return list[Math.floor(Math.random() * list.length)];
+    }
+
+    function resolveAssetUrl(path) {
+      return new URL(path, window.location.href).href;
+    }
+
+    function canLoadImage(url) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(true);
+        img.onerror = () => resolve(false);
+        img.src = url;
+      });
+    }
+
+    async function scanRewardImages(force = false) {
+      if (rewardPool.scanning) return;
+      if (rewardPool.scanned && !force) return;
+
+      rewardPool.scanning = true;
+      if (force) rewardPool.urls = [];
+
+      const exts = ["jpg", "jpeg", "png", "webp", "gif"];
+      const found = [];
+      let missStreak = 0;
+      const maxIndex = 300;
+
+      for (let i = 1; i <= maxIndex && missStreak < 40; i += 1) {
+        let foundForIndex = false;
+        for (const ext of exts) {
+          const url = resolveAssetUrl(`images/pic-${i}.${ext}`);
+          const ok = await canLoadImage(url);
+          if (ok) {
+            found.push(url);
+            foundForIndex = true;
+          }
+        }
+        missStreak = foundForIndex ? 0 : missStreak + 1;
+      }
+
+      rewardPool.urls = found;
+      rewardPool.scanned = true;
+      rewardPool.scanning = false;
+    }
+
+    function getRandomRewardImageUrl() {
+      if (rewardPool.urls.length === 0) {
+        const fallbackIndex = Math.floor(Math.random() * 18) + 1;
+        return resolveAssetUrl(`images/pic-${fallbackIndex}.jpg`);
+      }
+      return randItem(rewardPool.urls);
     }
 
     function generateTimes() {
@@ -566,13 +619,15 @@
         els.setTask.hidden = false;
         appState.interactiveTime = { hour: 12, minute: 0 };
         setSelectedHand("hour");
-        els.targetTime.textContent = timeText(task);
+        els.setPeriodTag.textContent = periodLabel(task.period);
+        els.targetTime.textContent = timeText24(task);
         drawClock(appState.interactiveTime, true);
         setFeedback("Állítsd be a mutatókat az órán.");
       }
     }
 
-    function startGame() {
+    async function startGame() {
+      await scanRewardImages();
       appState.tasks = generateTimes().map((task) => ({
         ...task,
         readHour: getReadHour(task)
@@ -585,8 +640,8 @@
     }
 
     function pickReward() {
-      const list = IMAGE_MANIFEST.filter((file) => !file.startsWith("images/."));
-      if (!list.length) {
+      const image = getRandomRewardImageUrl();
+      if (!image) {
         els.rewardTitle.textContent = "Szuper voltál! Most nincs betöltött jutalomkép.";
         els.rewardImage.removeAttribute("src");
         els.rewardImage.alt = "Nincs jutalomkép";
@@ -594,7 +649,6 @@
         return;
       }
 
-      const image = randItem(list);
       els.rewardTitle.textContent = "Ügyes vagy! Itt a jutalomképed:";
       els.rewardImage.src = image;
       els.rewardImage.alt = "Jutalomkép";
@@ -659,7 +713,7 @@
         appState.score += 1;
         setFeedback("Helyes válasz!", "ok");
       } else {
-        const solution = task.type === "read" ? `${periodLabel(task.period)}: ${timeText24(task)}` : timeText(task);
+        const solution = `${periodLabel(task.period)}: ${timeText24(task)}`;
         setFeedback(`Most nem ez volt a jó megoldás. A helyes idő: ${solution}.`, "bad");
       }
 
@@ -713,7 +767,9 @@
       updateInteractiveTime(angleFromPointer(event.clientX, event.clientY));
     }
 
-    els.startBtn.addEventListener("click", startGame);
+    els.startBtn.addEventListener("click", () => {
+      startGame();
+    });
     els.checkBtn.addEventListener("click", checkTask);
     els.nextBtn.addEventListener("click", nextTask);
     els.restartBtn.addEventListener("click", () => {
@@ -744,6 +800,7 @@
       dragging = false;
     });
 
+    scanRewardImages();
     drawClock({ hour: 10, minute: 10 }, false);
   </script>
 </body>
