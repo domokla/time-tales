@@ -66,12 +66,6 @@
       gap: 16px;
     }
 
-    .mode-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 14px;
-    }
-
     button {
       border: 0;
       border-radius: 18px;
@@ -85,29 +79,8 @@
     button:hover { transform: translateY(-2px); }
     button:active { transform: translateY(0); }
 
-    .mode-btn, .primary-btn, .secondary-btn, .hand-btn {
+    .primary-btn, .secondary-btn, .hand-btn {
       padding: 14px 18px;
-    }
-
-    .mode-btn {
-      background: linear-gradient(135deg, #2d87c8, #52c6d8);
-      text-align: left;
-    }
-
-    .mode-btn.active {
-      outline: 4px solid rgba(255, 138, 91, 0.35);
-      background: linear-gradient(135deg, #ff8a5b, #ffb067);
-    }
-
-    .mode-title {
-      display: block;
-      font-size: 1.15rem;
-      margin-bottom: 4px;
-    }
-
-    .hint {
-      font-size: 0.95rem;
-      opacity: 0.92;
     }
 
     .primary-btn {
@@ -305,23 +278,11 @@
 
     <section class="panel setup" id="setupPanel">
       <div>
-        <h2>Válassz játékot</h2>
-        <p class="small">Egy körben 5 feladat lesz. Ha legalább 4 jó, kapsz egy jutalomképet.</p>
+        <h2>Új játék</h2>
+        <p class="small">Egy körben 5 feladat lesz. A játék véletlenszerűen keveri az óra-leolvasós és az óra-beállítós feladatokat. Ha legalább 4 jó, kapsz egy jutalomképet.</p>
       </div>
 
-      <div class="mode-grid" id="modeButtons">
-        <button class="mode-btn active" data-mode="read">
-          <span class="mode-title">Olvasd le az órát</span>
-          <span class="hint">Analóg órát látsz, te írod be az órát és a percet.</span>
-        </button>
-
-        <button class="mode-btn" data-mode="set">
-          <span class="mode-title">Állítsd be az órát</span>
-          <span class="hint">Egy időt látsz, te állítod a mutatókat az órán.</span>
-        </button>
-      </div>
-
-      <button class="primary-btn" id="startBtn">Játék indítása</button>
+      <button class="primary-btn" id="startBtn">Új játék</button>
     </section>
 
     <section class="panel game" id="gamePanel">
@@ -397,7 +358,6 @@
     };
 
     const appState = {
-      mode: "read",
       tasks: [],
       currentIndex: 0,
       score: 0,
@@ -409,7 +369,6 @@
     const els = {
       setupPanel: document.getElementById("setupPanel"),
       gamePanel: document.getElementById("gamePanel"),
-      modeButtons: [...document.querySelectorAll(".mode-btn")],
       startBtn: document.getElementById("startBtn"),
       modeLabel: document.getElementById("modeLabel"),
       progressLabel: document.getElementById("progressLabel"),
@@ -437,6 +396,7 @@
 
     function generateTimes() {
       return Array.from({ length: SETTINGS.taskCount }, () => ({
+        type: Math.random() < 0.5 ? "read" : "set",
         hour: Math.floor(Math.random() * 12) + 1,
         minute: Math.floor(Math.random() * (60 / SETTINGS.minuteStep)) * SETTINGS.minuteStep
       }));
@@ -455,19 +415,14 @@
       return `${normalizeHour(hour)}:${pad(minute)}`;
     }
 
-    function updateModeButtons() {
-      els.modeButtons.forEach((btn) => {
-        btn.classList.toggle("active", btn.dataset.mode === appState.mode);
-      });
-    }
-
     function setFeedback(message, type = "") {
       els.feedback.textContent = message;
       els.feedback.className = `feedback ${type}`.trim();
     }
 
     function updateStatus() {
-      els.modeLabel.textContent = appState.mode === "read" ? "Olvasd le az órát" : "Állítsd be az órát";
+      const task = appState.tasks[appState.currentIndex];
+      els.modeLabel.textContent = task.type === "read" ? "Olvasd le az órát" : "Állítsd be az órát";
       els.progressLabel.textContent = `Feladat: ${appState.currentIndex + 1}/${appState.tasks.length}`;
       els.scoreLabel.textContent = `Pont: ${appState.score}`;
     }
@@ -557,7 +512,7 @@
       els.rewardBox.classList.remove("show");
       updateStatus();
 
-      if (appState.mode === "read") {
+      if (task.type === "read") {
         els.readTask.hidden = false;
         els.setTask.hidden = true;
         els.hourInput.value = "";
@@ -641,7 +596,7 @@
       const task = appState.tasks[appState.currentIndex];
       let correct = false;
 
-      if (appState.mode === "read") {
+      if (task.type === "read") {
         const answer = getReadAnswer();
         const valid = answer.hour >= 1 && answer.hour <= 12 && answer.minute >= 0 && answer.minute < 60 && answer.minute % SETTINGS.minuteStep === 0;
         if (!valid) {
@@ -704,16 +659,10 @@
     let dragging = false;
 
     function handlePointer(event) {
-      if (appState.mode !== "set" || appState.locked) return;
+      const task = appState.tasks[appState.currentIndex];
+      if (!task || task.type !== "set" || appState.locked) return;
       updateInteractiveTime(angleFromPointer(event.clientX, event.clientY));
     }
-
-    els.modeButtons.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        appState.mode = btn.dataset.mode;
-        updateModeButtons();
-      });
-    });
 
     els.startBtn.addEventListener("click", startGame);
     els.checkBtn.addEventListener("click", checkTask);
@@ -722,7 +671,6 @@
       els.setupPanel.style.display = "grid";
       els.gamePanel.classList.remove("active");
       els.rewardBox.classList.remove("show");
-      updateModeButtons();
     });
     els.hourHandBtn.addEventListener("click", () => setSelectedHand("hour"));
     els.minuteHandBtn.addEventListener("click", () => setSelectedHand("minute"));
@@ -745,7 +693,6 @@
       dragging = false;
     });
 
-    updateModeButtons();
     drawClock({ hour: 10, minute: 10 }, false);
   </script>
 </body>
