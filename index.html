@@ -291,7 +291,7 @@
   <main class="app">
     <section class="hero">
       <h1>Óra Játék</h1>
-      <p>Gyakorold az idő leolvasását és az óra beállítását 5 perces időpontokkal.</p>
+      <p>Gyakorold az idő leolvasását és az óra beállítását percre pontos időpontokkal.</p>
     </section>
 
     <section class="panel setup" id="setupPanel">
@@ -330,7 +330,7 @@
               </label>
               <label>
                 Perc
-                <input id="minuteInput" type="number" inputmode="numeric" min="0" max="55" step="5">
+                <input id="minuteInput" type="number" inputmode="numeric" min="0" max="59" step="1">
               </label>
             </div>
           </div>
@@ -367,7 +367,7 @@
     const SETTINGS = {
       taskCount: 5,
       passingScore: 4,
-      minuteStep: 5
+      minuteStep: 1
     };
 
     const appState = {
@@ -700,7 +700,7 @@
         const answer = getReadAnswer();
         const valid = answer.hour >= 0 && answer.hour <= 23 && answer.minute >= 0 && answer.minute < 60 && answer.minute % SETTINGS.minuteStep === 0;
         if (!valid) {
-          setFeedback("Kérlek 0-23 közötti órát és 5 perces percet írj be.", "bad");
+          setFeedback("Kérlek 0-23 közötti órát és 0-59 közötti percet írj be.", "bad");
           return;
         }
         correct = isCorrectRead(task, answer);
