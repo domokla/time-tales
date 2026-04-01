@@ -39,11 +39,38 @@
     .hero {
       text-align: center;
       padding: 12px 0 20px;
+      position: relative;
     }
 
     .hero h1 {
-      margin: 0;
+      margin: 0 0 8px;
       font-size: clamp(2rem, 5vw, 3.3rem);
+    }
+
+    .hero-badges {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .hero-badge {
+      background: rgba(255, 255, 255, 0.72);
+      border: 2px solid rgba(255, 255, 255, 0.95);
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 1.5rem;
+      box-shadow: 0 8px 18px rgba(22, 50, 79, 0.1);
+      animation: bob 3.2s ease-in-out infinite;
+    }
+
+    .hero-badge:nth-child(2) {
+      animation-delay: 0.4s;
+    }
+
+    .hero-badge:nth-child(3) {
+      animation-delay: 0.8s;
     }
 
     .hero p {
@@ -114,6 +141,13 @@
       border-radius: 999px;
       padding: 8px 14px;
       font-weight: 700;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .pill::after {
+      content: "⏰";
+      margin-left: 8px;
     }
 
     .task-layout {
@@ -128,6 +162,31 @@
       border: 2px solid var(--line);
       border-radius: 24px;
       padding: 18px;
+    }
+
+    .clock-card {
+      position: relative;
+    }
+
+    .clock-card::before,
+    .clock-card::after {
+      position: absolute;
+      font-size: 1.8rem;
+      opacity: 0.9;
+    }
+
+    .clock-card::before {
+      content: "🕘";
+      top: 12px;
+      left: 16px;
+      transform: rotate(-8deg);
+    }
+
+    .clock-card::after {
+      content: "🕒";
+      right: 16px;
+      bottom: 12px;
+      transform: rotate(8deg);
     }
 
     .clock-wrap {
@@ -147,6 +206,10 @@
       margin: 0 0 14px;
       font-size: 1.25rem;
       font-weight: 700;
+    }
+
+    .prompt::before {
+      content: "🕰️ ";
     }
 
     .inputs {
@@ -264,6 +327,19 @@
       box-shadow: var(--shadow);
     }
 
+    .sparkle-row {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 8px;
+      font-size: 1.4rem;
+    }
+
+    @keyframes bob {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+
     .small {
       font-size: 0.95rem;
     }
@@ -290,6 +366,11 @@
 <body>
   <main class="app">
     <section class="hero">
+      <div class="hero-badges" aria-hidden="true">
+        <span class="hero-badge">🕘</span>
+        <span class="hero-badge">⏰</span>
+        <span class="hero-badge">🕒</span>
+      </div>
       <h1>Óra Játék</h1>
       <p>Gyakorold az idő leolvasását és az óra beállítását percre pontos időpontokkal.</p>
     </section>
@@ -356,6 +437,7 @@
       </div>
 
       <div class="reward" id="rewardBox">
+        <div class="sparkle-row" aria-hidden="true">⭐ 🎉 ⭐</div>
         <h3 id="rewardTitle"></h3>
         <img id="rewardImage" alt="Jutalomkép">
         <button class="secondary-btn" id="restartBtn" hidden>Új kör</button>
